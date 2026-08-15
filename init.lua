@@ -56,6 +56,45 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
     {
+    "lewis6991/gitsigns.nvim",
+
+    config = function()
+        require("gitsigns").setup()
+    end,
+},
+    {
+    "echasnovski/mini.map",
+    version = false,
+
+    config = function()
+        local map = require("mini.map")
+
+        map.setup({
+            integrations = {
+                map.gen_integration.builtin_search(),
+                map.gen_integration.diff(),
+                map.gen_integration.diagnostic(),
+            },
+
+            symbols = {
+                encode = map.gen_encode_symbols.dot("3x2"),
+            },
+
+            window = {
+                show_integration_count = false,
+                width = 10,
+                winblend = 15,
+            },
+        })
+
+        vim.keymap.set("n", "<leader>mm", function()
+            map.toggle()
+        end, {
+            desc = "Toggle minimap",
+        })
+    end,
+},
+    {
     "neovim/nvim-lspconfig",
 },
     {
@@ -203,53 +242,46 @@ require("lazy").setup({
 
     config = function()
         require("lualine").setup({
-            options = {
-                theme = "auto",
-                globalstatus = true,
-                section_separators = "",
-                component_separators = "│",
+
+    options = {
+        theme = "auto",
+        globalstatus = true,
+        component_separators = "",
+        section_separators = "",
+    },
+
+    sections = {
+
+        lualine_a = {
+            "mode",
+        },
+
+        lualine_b = {
+            "branch",
+            "diff",
+            "diagnostics",
+        },
+
+        lualine_c = {
+            {
+                "filename",
+                path = 1,
             },
+        },
 
-            sections = {
-                lualine_a = {
-                    {
-                        "mode",
-                        icon = "󰘧",
-                    },
-                },
+        lualine_x = {
+            "filetype",
+        },
 
-                lualine_b = {
-                    {
-                        "filename",
-                        path = 1,
-                    },
-                },
+        lualine_y = {
+            "progress",
+        },
 
-                lualine_c = {
-                    {
-                        "branch",
-                        icon = "󰘬",
-                    },
-                    "diff",
-                    "diagnostics",
-                },
-
-                lualine_x = {
-                    "filetype",
-                },
-
-                lualine_y = {
-                    "progress",
-                },
-
-                lualine_z = {
-                    {
-                        "location",
-                        icon = "󰍒",
-                    },
-                },
-            },
-        })
+        lualine_z = {
+            "location",
+        },
+    },
+})
     end,
 },
 
@@ -297,50 +329,113 @@ require("lazy").setup({
 
         vim.lsp.enable("clangd")
     end,
-},    {
+},    
+{
     "hrsh7th/nvim-cmp",
+
     dependencies = {
         "hrsh7th/cmp-nvim-lsp",
         "hrsh7th/cmp-buffer",
         "hrsh7th/cmp-path",
+
         "L3MON4D3/LuaSnip",
         "saadparwaiz1/cmp_luasnip",
+
+        "onsails/lspkind.nvim",
     },
 
     config = function()
         local cmp = require("cmp")
         local luasnip = require("luasnip")
+        local lspkind = require("lspkind")
 
         cmp.setup({
+
+            -- Snippets
             snippet = {
                 expand = function(args)
                     luasnip.lsp_expand(args.body)
                 end,
             },
 
+            -- Keymaps
             mapping = cmp.mapping.preset.insert({
+
+                -- Open completion manually
                 ["<C-Space>"] = cmp.mapping.complete(),
 
+                -- Confirm selected suggestion
                 ["<CR>"] = cmp.mapping.confirm({
-                    select = true,
+                    select = false,
                 }),
 
-                ["<Tab>"] = cmp.mapping.select_next_item(),
-                ["<S-Tab>"] = cmp.mapping.select_prev_item(),
+                -- Smart Tab
+                ["<Tab>"] = cmp.mapping(function(fallback)
+                    if cmp.visible() then
+                        cmp.select_next_item()
 
+                    elseif luasnip.expand_or_jumpable() then
+                        luasnip.expand_or_jump()
+
+                    else
+                        fallback()
+                    end
+                end, { "i", "s" }),
+
+                -- Smart Shift + Tab
+                ["<S-Tab>"] = cmp.mapping(function(fallback)
+                    if cmp.visible() then
+                        cmp.select_prev_item()
+
+                    elseif luasnip.jumpable(-1) then
+                        luasnip.jump(-1)
+
+                    else
+                        fallback()
+                    end
+                end, { "i", "s" }),
+
+                -- Close completion
                 ["<C-e>"] = cmp.mapping.abort(),
             }),
 
-            sources = {
+            -- Completion sources
+            sources = cmp.config.sources({
                 { name = "nvim_lsp" },
                 { name = "luasnip" },
                 { name = "buffer" },
                 { name = "path" },
+            }),
+
+            -- Icons + labels
+            formatting = {
+                format = lspkind.cmp_format({
+                    mode = "symbol_text",
+                    maxwidth = 50,
+
+                    menu = {
+                        nvim_lsp = "[LSP]",
+                        luasnip = "[SNIP]",
+                        buffer = "[BUF]",
+                        path = "[PATH]",
+                    },
+                }),
+            },
+
+            -- Nice borders
+            window = {
+                completion = cmp.config.window.bordered(),
+                documentation = cmp.config.window.bordered(),
+            },
+
+            -- Subtle inline suggestion
+            experimental = {
+                ghost_text = true,
             },
         })
     end,
-},  
-    {
+},
+   {
     "stevearc/conform.nvim",
 
     config = function()
@@ -383,9 +478,33 @@ end, { desc = "Format file" })
     end,
 },
 })
+require("luasnip.loaders.from_lua").load({
+    paths = {
+        vim.fn.stdpath("config") .. "/snippets",
+    },
+})
+
 if vim.fn.argc() == 1 and vim.fn.isdirectory(vim.fn.argv(0)) == 1 then
     vim.cmd("NvimTreeOpen")
 end
+-- Ctrl + A → Select all
+vim.keymap.set("n", "<C-a>", "ggVG", { desc = "Select all" })
+
+vim.keymap.set("i", "<C-a>", "<Esc>ggVG", { desc = "Select all" })
+
+
+-- Arrow keys in normal mode
+vim.keymap.set("n", "<Up>", "k")
+vim.keymap.set("n", "<Down>", "j")
+vim.keymap.set("n", "<Left>", "h")
+vim.keymap.set("n", "<Right>", "l")
+
+
+-- Shift + Arrow → selection in normal mode
+vim.keymap.set("n", "<S-Up>", "Vk")
+vim.keymap.set("n", "<S-Down>", "Vj")
+vim.keymap.set("n", "<S-Left>", "vh")
+vim.keymap.set("n", "<S-Right>", "vl")
 vim.keymap.set("n", "<C-b>", "<cmd>NvimTreeToggle<CR>")
 vim.keymap.set("n", "<C-Tab>", "<cmd>BufferLineCycleNext<CR>")
 vim.keymap.set("n", "<S-Tab>", "<cmd>BufferLineCyclePrev<CR>")
