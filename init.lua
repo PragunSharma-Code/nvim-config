@@ -479,7 +479,7 @@ end, { desc = "Format file" })
 },
 })
 require("luasnip.loaders.from_lua").load({
-    paths = {
+  paths = {
         vim.fn.stdpath("config") .. "/snippets",
     },
 })
