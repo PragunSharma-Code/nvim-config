@@ -37,14 +37,6 @@ ls.add_snippets("cpp", {
         t({"", "}"}),
     }),
 
-    s("vec", {
-        t("vector<int> "),
-        i(1, "nums"),
-        t(" = {"),
-        i(2),
-        t("};"),
-    }),
-
     s("cout", {
         t("cout << "),
         i(1),
